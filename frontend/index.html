@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransitTrack AI — Intelligent Transit Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden" role="alert" aria-live="polite"></div>
+
+    <!-- Login Screen -->
+    <section id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="brand-header">
+                    <div class="brand-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="4"/>
+                            <path d="m9 9 6 6"/>
+                            <path d="m15 9-6 6"/>
+                            <circle cx="12" cy="12" r="2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1>TransitTrack <span class="accent-text">AI</span></h1>
+                        <p class="tagline">Public Transit Intelligence & Operations Platform</p>
+                    </div>
+                </div>
+
+                <div class="login-body">
+                    <div class="login-badge-info">
+                        <span class="pulse-dot"></span>
+                        <span>Version 1.0 · Agency Operations Portal</span>
+                    </div>
+
+                    <form id="loginForm" novalidate>
+                        <div class="form-group">
+                            <label for="username">Operator Username</label>
+                            <div class="input-icon-wrap">
+                                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <input id="username" name="username" type="text" autocomplete="username" placeholder="admin" required autofocus>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password <span class="label-hint">(min. 8 characters)</span></label>
+                            <div class="input-icon-wrap">
+                                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" minlength="8" required>
+                            </div>
+                        </div>
+
+                        <div id="loginError" class="alert-box error hidden" role="alert"></div>
+
+                        <button type="submit" class="btn btn-primary btn-block" id="loginButton">
+                            <span>Sign in to Dashboard</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </button>
+
+                        <div class="login-footer-hint">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <span>Default: <strong>admin</strong> / <strong>transit123</strong> (NFR-04 enforced)</span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- App Shell -->
+    <div id="app" class="app hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon sm">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg>
+                </div>
+                <div class="brand-text">
+                    <h2>TransitTrack <span>AI</span></h2>
+                    <small>Operations Console</small>
+                </div>
+                <button class="mobile-close-btn" id="mobileCloseBtn" aria-label="Close sidebar">✕</button>
+            </div>
+
+            <nav class="nav-menu" role="navigation">
+                <div class="nav-section-title">Operations</div>
+                <button class="nav-btn active" data-section="dashboard">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-btn" data-section="crowd">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Crowd Prediction</span>
+                </button>
+                <button class="nav-btn" data-section="risk">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>Route Risk</span>
+                </button>
+                <button class="nav-btn" data-section="alternative">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+                    <span>Alternative Routes</span>
+                </button>
+                <button class="nav-btn" data-section="demand">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    <span>Demand Forecast</span>
+                </button>
+                <button class="nav-btn" data-section="performance">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="2"/></svg>
+                    <span>Performance Score</span>
+                </button>
+                <button class="nav-btn" data-section="simulation">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span>What-If Simulation</span>
+                </button>
+
+                <div class="nav-section-title">Data Management</div>
+                <button class="nav-btn" data-section="historical">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    <span>Historical Data</span>
+                </button>
+                <button class="nav-btn" data-section="reports">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Reports</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status-indicator">
+                    <span class="status-pulse-dot"></span>
+                    <div class="status-details">
+                        <span class="status-text">System Active</span>
+                        <small>SQLite · FastAPI · Local</small>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle menu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <div class="breadcrumb-container">
+                        <span class="breadcrumb-root">TransitTrack AI</span>
+                        <span class="breadcrumb-separator">/</span>
+                        <strong class="breadcrumb-active" id="breadcrumbText">Dashboard</strong>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <!-- Global Search -->
+                    <div class="header-search-wrap">
+                        <form id="headerSearchForm" class="search-form">
+                            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input id="headerSearch" type="search" placeholder="Search routes, stations, records..." autocomplete="off">
+                        </form>
+                        <!-- Search Dropdown Results -->
+                        <div id="searchResultsDropdown" class="search-dropdown hidden"></div>
+                    </div>
+
+                    <!-- User Profile -->
+                    <div class="user-profile-bar">
+                        <div class="avatar-badge" id="userAvatar">AD</div>
+                        <div class="user-info">
+                            <strong id="userName">admin</strong>
+                            <span>Dispatcher</span>
+                        </div>
+                        <button type="button" class="btn-ghost btn-sm" id="logoutButton" title="Sign out">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <span>Exit</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="content-container">
+                <!-- 1. DASHBOARD SECTION -->
+                <section class="page-section active-section" id="dashboard">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Real-Time Transit Intelligence</span>
+                            <h1 class="section-title">Operations Dashboard</h1>
+                            <p class="section-desc">Unified monitoring of crowd dynamics, route risks, and agency performance scores.</p>
+                        </div>
+                        <div class="live-clock-card">
+                            <span class="clock-label">Active Date</span>
+                            <strong id="todayDate">—</strong>
+                            <span class="clock-sub" id="currentTime">Live</span>
+                        </div>
+                    </div>
+
+                    <!-- 4 Summary KPI Cards -->
+                    <div class="kpi-grid" id="dashboardKPIs">
+                        <article class="kpi-card">
+                            <div class="kpi-header">
+                                <span>Crowd Status</span>
+                                <div class="kpi-icon-wrap crowd">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpiCrowd">—</div>
+                            <div class="kpi-meta" id="kpiCrowdSub">Sampled route status</div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-header">
+                                <span>Fleet Risk Profile</span>
+                                <div class="kpi-icon-wrap risk">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpiRisk">—</div>
+                            <div class="kpi-meta" id="kpiRiskSub">Delay & volume analysis</div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-header">
+                                <span>Average Demand</span>
+                                <div class="kpi-icon-wrap demand">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpiDemand">—</div>
+                            <div class="kpi-meta">Daily average ridership</div>
+                        </article>
+
+                        <article class="kpi-card">
+                            <div class="kpi-header">
+                                <span>Performance Score</span>
+                                <div class="kpi-icon-wrap score">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/></svg>
+                                </div>
+                            </div>
+                            <div class="kpi-value" id="kpiScore">—</div>
+                            <div class="kpi-meta">Agency weighted score (0–100)</div>
+                        </article>
+                    </div>
+
+                    <!-- Dashboard Main Grid -->
+                    <div class="dashboard-split-grid">
+                        <!-- Quick Predict & Actions (NFR-06: 1-Click Fast Predict) -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div>
+                                    <span class="panel-tag">Speed Usability · NFR-06</span>
+                                    <h2 class="panel-title">Quick Crowd Prediction</h2>
+                                </div>
+                            </div>
+                            <p class="panel-subtitle">Instant crowd prediction in under 3 actions from login.</p>
+                            
+                            <div class="quick-predict-box">
+                                <label for="dashQuickRoute">Select target transit line</label>
+                                <div class="quick-predict-controls">
+                                    <select id="dashQuickRoute" class="form-select"></select>
+                                    <button class="btn btn-primary" id="dashQuickBtn" type="button">Predict</button>
+                                </div>
+                                <div id="dashQuickResult" class="quick-result-card hidden"></div>
+                            </div>
+
+                            <div class="action-shortcuts-block">
+                                <span class="shortcuts-title">Operations Quick Launch</span>
+                                <div class="action-shortcut-list">
+                                    <button class="shortcut-item" data-go="crowd" type="button">
+                                        <div class="shortcut-icon crowd">👥</div>
+                                        <div>
+                                            <strong>Crowd Predictor</strong>
+                                            <small>Detailed capacity modeling (FR-01)</small>
+                                        </div>
+                                    </button>
+                                    <button class="shortcut-item" data-go="risk" type="button">
+                                        <div class="shortcut-icon risk">⚠️</div>
+                                        <div>
+                                            <strong>Route Risk Detector</strong>
+                                            <small>Delay & crowding assessment (FR-02)</small>
+                                        </div>
+                                    </button>
+                                    <button class="shortcut-item" data-go="alternative" type="button">
+                                        <div class="shortcut-icon alt">🔀</div>
+                                        <div>
+                                            <strong>Alternative Route Engine</strong>
+                                            <small>Automated suggestions (FR-03)</small>
+                                        </div>
+                                    </button>
+                                    <button class="shortcut-item" data-go="simulation" type="button">
+                                        <div class="shortcut-icon sim">⚡</div>
+                                        <div>
+                                            <strong>What-If Simulator</strong>
+                                            <small>Stress test transit scenarios (FR-06)</small>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Route Overview Table -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div>
+                                    <span class="panel-tag">Active Inventory</span>
+                                    <h2 class="panel-title">Monitored Routes & Stations</h2>
+                                </div>
+                                <button class="btn-ghost btn-sm" data-go="reports" type="button">View Report</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Route / Station</th>
+                                            <th>Type</th>
+                                            <th>Crowd</th>
+                                            <th>Risk</th>
+                                            <th>Score</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashboardTable">
+                                        <tr><td colspan="6" class="table-empty-cell">Loading route data...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. CROWD PREDICTION SECTION (FR-01, FR-07, NFR-01) -->
+                <section class="page-section" id="crowd">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-01 / FR-07 · Speed NFR-01</span>
+                            <h1 class="section-title">Smart Crowd Prediction</h1>
+                            <p class="section-desc">Predict crowd levels for a transit route or station based on stored historical ridership data.</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-two-col">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2 class="panel-title">Prediction Parameters</h2>
+                            </div>
+                            <div class="form-group">
+                                <label for="crowdTarget">Transit Route or Station</label>
+                                <select id="crowdTarget" class="form-select"></select>
+                            </div>
+                            <div id="crowdError" class="alert-box error hidden"></div>
+                            <button class="btn btn-primary btn-block" id="crowdButton" type="button">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span>Predict Crowd Level</span>
+                            </button>
+
+                            <div class="info-callout">
+                                <strong>Capacity Model:</strong>
+                                <ul>
+                                    <li><strong>Low:</strong> Below 70% vehicle/station capacity</li>
+                                    <li><strong>Moderate:</strong> 70% – 90% capacity</li>
+                                    <li><strong>High:</strong> Above 90% capacity (Triggers Alternatives)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="panel result-container" id="crowdResultPanel">
+                            <div class="result-placeholder" id="crowdPlaceholder">
+                                <div class="placeholder-icon">👥</div>
+                                <h3>Select a Route to Predict</h3>
+                                <p>Choose a target route or station from the left panel and click "Predict Crowd Level".</p>
+                            </div>
+                            <div class="result-content hidden" id="crowdContent">
+                                <span class="result-eyebrow">Crowd Classification</span>
+                                <div class="classification-header">
+                                    <h2 class="result-headline" id="crowdLevel">—</h2>
+                                    <div id="crowdBadge"></div>
+                                </div>
+                                <div class="capacity-gauge-wrap">
+                                    <div class="gauge-label-row">
+                                        <span>Capacity Utilization</span>
+                                        <strong id="crowdGaugeVal">0%</strong>
+                                    </div>
+                                    <div class="gauge-track">
+                                        <div class="gauge-bar" id="crowdGaugeBar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="metrics-card-grid">
+                                    <div class="metric-mini-card">
+                                        <span>Avg Ridership</span>
+                                        <strong id="crowdAvgRiders">—</strong>
+                                    </div>
+                                    <div class="metric-mini-card">
+                                        <span>Capacity Limit</span>
+                                        <strong id="crowdCapMax">1,600</strong>
+                                    </div>
+                                    <div class="metric-mini-card">
+                                        <span>Sample Count</span>
+                                        <strong id="crowdCount">—</strong>
+                                    </div>
+                                </div>
+                                <div class="result-narrative" id="crowdMessage"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. ROUTE RISK DETECTION SECTION (FR-02, FR-08, NFR-02) -->
+                <section class="page-section" id="risk">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-02 / FR-08 · Speed NFR-02</span>
+                            <h1 class="section-title">Route Risk Detection</h1>
+                            <p class="section-desc">Detect operational risk levels for transit routes based on historical delay patterns and crowd conditions.</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-two-col">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2 class="panel-title">Target Transit Route</h2>
+                            </div>
+                            <div class="form-group">
+                                <label for="riskTarget">Select Route or Station</label>
+                                <select id="riskTarget" class="form-select"></select>
+                            </div>
+                            <div id="riskError" class="alert-box error hidden"></div>
+                            <button class="btn btn-primary btn-block" id="riskButton" type="button">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/></svg>
+                                <span>Detect Route Risk</span>
+                            </button>
+
+                            <div class="info-callout">
+                                <strong>Risk Detection Matrix:</strong>
+                                <ul>
+                                    <li><strong>Low:</strong> Avg Delay &lt; 5 min and Normal Crowd</li>
+                                    <li><strong>Medium:</strong> Avg Delay 5 – 12 min</li>
+                                    <li><strong>High:</strong> Avg Delay ≥ 12 min or High Crowd Level</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="panel result-container" id="riskResultPanel">
+                            <div class="result-placeholder" id="riskPlaceholder">
+                                <div class="placeholder-icon">⚠️</div>
+                                <h3>Select a Route to Analyze Risk</h3>
+                                <p>Choose a target route and click "Detect Route Risk" to compute operational vulnerability.</p>
+                            </div>
+                            <div class="result-content hidden" id="riskContent">
+                                <span class="result-eyebrow">Assessed Operational Risk</span>
+                                <div class="classification-header">
+                                    <h2 class="result-headline" id="riskLevel">—</h2>
+                                    <div id="riskBadge"></div>
+                                </div>
+                                <div class="risk-meter-wrap">
+                                    <div class="risk-spectrum">
+                                        <span class="spectrum-segment low">Low</span>
+                                        <span class="spectrum-segment med">Medium</span>
+                                        <span class="spectrum-segment high">High</span>
+                                    </div>
+                                    <div class="risk-indicator-pointer" id="riskPointer"></div>
+                                </div>
+                                <div class="metrics-card-grid">
+                                    <div class="metric-mini-card">
+                                        <span>Average Delay</span>
+                                        <strong id="riskAvgDelay">—</strong>
+                                    </div>
+                                    <div class="metric-mini-card">
+                                        <span>Crowd Status</span>
+                                        <strong id="riskCrowdFactor">—</strong>
+                                    </div>
+                                    <div class="metric-mini-card">
+                                        <span>Alt Required</span>
+                                        <strong id="riskAltTrigger">—</strong>
+                                    </div>
+                                </div>
+                                <div class="result-narrative" id="riskMessage"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. ALTERNATIVE ROUTES SECTION (FR-03, FR-09) -->
+                <section class="page-section" id="alternative">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-03 / FR-09</span>
+                            <h1 class="section-title">Smart Alternative Routes</h1>
+                            <p class="section-desc">Automated rerouting suggestions triggered when crowd level or route risk exceeds operational thresholds.</p>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">Route Threshold Evaluator</h2>
+                        </div>
+                        <div class="inline-action-bar">
+                            <div class="form-group flex-1">
+                                <label for="altTarget">Current Transit Route / Station</label>
+                                <select id="altTarget" class="form-select"></select>
+                            </div>
+                            <div class="btn-align-end">
+                                <button class="btn btn-primary" id="altButton" type="button">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5"/><path d="M4 20 21 3"/></svg>
+                                    <span>Check Threshold & Alternatives</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="altError" class="alert-box error hidden"></div>
+
+                        <div id="altResultBlock" class="hidden">
+                            <div class="threshold-status-card" id="altStatusCard">
+                                <div class="threshold-icon" id="altStatusIcon">✓</div>
+                                <div>
+                                    <h3 id="altStatusTitle">Status Title</h3>
+                                    <p id="altMessage"></p>
+                                </div>
+                            </div>
+
+                            <div id="altSuggestionsSection" class="hidden">
+                                <h3 class="subsection-title">Ranked Alternative Routes</h3>
+                                <div id="altList" class="alternatives-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. DEMAND FORECAST SECTION (FR-04, FR-10) -->
+                <section class="page-section" id="demand">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-04 / FR-10</span>
+                            <h1 class="section-title">Passenger Demand Forecasting</h1>
+                            <p class="section-desc">Forecast future passenger demand over 7, 14, or 30 days based on historical ridership trends.</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-two-col">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2 class="panel-title">Forecast Configuration</h2>
+                            </div>
+                            <div class="form-group">
+                                <label for="demandTarget">Transit Route or Station</label>
+                                <select id="demandTarget" class="form-select"></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="forecastPeriod">Future Forecast Horizon</label>
+                                <select id="forecastPeriod" class="form-select">
+                                    <option value="7">Next 7 Days (Short-Term Operational)</option>
+                                    <option value="14">Next 14 Days (Bi-Weekly Tactical)</option>
+                                    <option value="30">Next 30 Days (Monthly Strategic)</option>
+                                </select>
+                            </div>
+                            <div id="demandError" class="alert-box error hidden"></div>
+                            <button class="btn btn-primary btn-block" id="demandButton" type="button">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+                                <span>Generate Demand Forecast</span>
+                            </button>
+
+                            <div class="forecast-meta-box hidden" id="demandMetaBox">
+                                <h4>Forecast Summary</h4>
+                                <div class="meta-data-line">
+                                    <span>Total Forecasted Demand:</span>
+                                    <strong id="demandTotalVal">—</strong>
+                                </div>
+                                <div class="meta-data-line">
+                                    <span>Daily Expected Average:</span>
+                                    <strong id="demandAvgVal">—</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div>
+                                    <span class="panel-tag">Interactive Projection</span>
+                                    <h2 class="panel-title">Demand Trend Chart</h2>
+                                </div>
+                            </div>
+                            <p class="panel-subtitle" id="demandSummary">Select a route and horizon to render daily demand projections.</p>
+
+                            <!-- SVG Chart Container -->
+                            <div class="chart-wrapper">
+                                <div class="chart-scroll-container">
+                                    <svg id="demandSvgChart" class="demand-svg" viewBox="0 0 600 240" preserveAspectRatio="none"></svg>
+                                </div>
+                                <div id="chartTooltip" class="chart-tooltip hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. PERFORMANCE SCORE SECTION (FR-05, FR-11) -->
+                <section class="page-section" id="performance">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-05 / FR-11</span>
+                            <h1 class="section-title">Transit Performance Scoring</h1>
+                            <p class="section-desc">Standardized 0–100 efficiency scores generated from delay history, overcrowding penalties, and reliability bonuses.</p>
+                        </div>
+                        <button class="btn btn-secondary" data-go="reports" type="button">
+                            <span>Open Combined Report</span>
+                        </button>
+                    </div>
+
+                    <div class="performance-score-grid" id="performanceGrid">
+                        <div class="loading-state">Loading performance scorecards...</div>
+                    </div>
+                </section>
+
+                <!-- 7. WHAT-IF SIMULATION SECTION (FR-06, FR-12, NFR-03) -->
+                <section class="page-section" id="simulation">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-06 / FR-12 · Speed NFR-03</span>
+                            <h1 class="section-title">What-If Transit Simulation</h1>
+                            <p class="section-desc">Simulate how hypothetical ridership surges or schedule delays impact crowd levels, route risk, and scores.</p>
+                        </div>
+                    </div>
+
+                    <div class="feature-two-col">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h2 class="panel-title">Hypothetical Scenario Inputs</h2>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="simTarget">Target Transit Route / Station</label>
+                                <select id="simTarget" class="form-select"></select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="scenario">Scenario Description</label>
+                                <textarea id="scenario" class="form-textarea" placeholder="Example: Severe blizzard causing delays or major festival event downtown"></textarea>
+                                <div class="preset-pill-list">
+                                    <span class="preset-label">Presets:</span>
+                                    <button type="button" class="preset-pill" data-preset="event">Event Rush (+30% riders, +10m delay)</button>
+                                    <button type="button" class="preset-pill" data-preset="weather">Storm Alert (-10% riders, +20m delay)</button>
+                                    <button type="button" class="preset-pill" data-preset="offpeak">Off-Peak (-25% riders, -2m delay)</button>
+                                </div>
+                            </div>
+
+                            <div class="form-row-2">
+                                <div class="form-group">
+                                    <label for="demandChange">Demand Change (%)</label>
+                                    <input id="demandChange" type="number" class="form-input" value="25" min="-80" max="200" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="delayChange">Delay Change (min)</label>
+                                    <input id="delayChange" type="number" class="form-input" value="8" min="-30" max="120" step="1">
+                                </div>
+                            </div>
+
+                            <div id="simError" class="alert-box error hidden"></div>
+
+                            <button class="btn btn-primary btn-block" id="simulationButton" type="button">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span>Run Simulation</span>
+                            </button>
+                        </div>
+
+                        <div class="panel result-container">
+                            <div class="result-placeholder" id="simPlaceholder">
+                                <div class="placeholder-icon">⚡</div>
+                                <h3>Ready to Run Simulation</h3>
+                                <p>Select a route, enter a hypothetical scenario, and click "Run Simulation" to model the impacts.</p>
+                            </div>
+
+                            <div class="result-content hidden" id="simContent">
+                                <span class="result-eyebrow">Simulation Impact Analysis</span>
+                                <h3 class="scenario-name" id="simScenarioName">—</h3>
+
+                                <div class="comparison-grid">
+                                    <!-- Baseline Card -->
+                                    <div class="compare-card baseline">
+                                        <div class="compare-header">
+                                            <span>Baseline State</span>
+                                            <span class="tag-subtle">Historical</span>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Crowd Level:</span>
+                                            <strong id="simBaseCrowd">—</strong>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Route Risk:</span>
+                                            <strong id="simBaseRisk">—</strong>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Avg Ridership:</span>
+                                            <strong id="simBaseDemand">—</strong>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Score:</span>
+                                            <strong id="simBaseScore">—</strong>
+                                        </div>
+                                    </div>
+
+                                    <!-- Simulated Card -->
+                                    <div class="compare-card simulated">
+                                        <div class="compare-header">
+                                            <span>Simulated Impact</span>
+                                            <span class="tag-active">What-If</span>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Crowd Level:</span>
+                                            <strong id="simResCrowd">—</strong>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Route Risk:</span>
+                                            <strong id="simResRisk">—</strong>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Projected Demand:</span>
+                                            <strong id="simResDemand">—</strong>
+                                        </div>
+                                        <div class="compare-stat">
+                                            <span>Projected Score:</span>
+                                            <strong id="simResScore">—</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="simulation-delta-row" id="simDeltaRow"></div>
+                                <div class="result-narrative" id="simulationMessage"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 8. HISTORICAL DATA SECTION (FR-13) - Full CRUD & Search -->
+                <section class="page-section" id="historical">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Functional Requirement FR-13</span>
+                            <h1 class="section-title">Historical Transit Data Management</h1>
+                            <p class="section-desc">Create, read, update, delete, and search transit operational records used for intelligence models.</p>
+                        </div>
+                        <button class="btn btn-primary" id="openAddModalBtn" type="button">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <span>Add New Record</span>
+                        </button>
+                    </div>
+
+                    <div class="panel">
+                        <!-- Table Toolbar -->
+                        <div class="table-toolbar">
+                            <div class="toolbar-left">
+                                <h3 class="toolbar-title">Stored Historical Records</h3>
+                                <span class="record-counter" id="recordCountBadge">0 records</span>
+                            </div>
+                            <div class="toolbar-right">
+                                <div class="table-search-box">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                    <input id="tableSearch" type="search" placeholder="Filter by route, date, time...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Table -->
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Route / Station</th>
+                                        <th>Date</th>
+                                        <th>Schedule</th>
+                                        <th>Delay</th>
+                                        <th>Ridership</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historicalTable">
+                                    <tr><td colspan="7" class="table-empty-cell">Loading historical records...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. COMBINED REPORT SECTION (FR-05, FR-11) -->
+                <section class="page-section" id="reports">
+                    <div class="section-banner no-print">
+                        <div>
+                            <span class="section-eyebrow">Combined Reporting FR-05 / FR-11</span>
+                            <h1 class="section-title">Agency Performance Report</h1>
+                            <p class="section-desc">Consolidated audit report combining crowd classification, route risk, performance scores, and 7-day demand forecasts.</p>
+                        </div>
+                        <button class="btn btn-primary" id="printReportBtn" type="button">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            <span>Print / Export Report</span>
+                        </button>
+                    </div>
+
+                    <div class="panel report-document" id="printableReport">
+                        <div class="report-header">
+                            <div class="report-brand">
+                                <h2>TransitTrack AI</h2>
+                                <p>Comprehensive Agency Performance & Risk Audit</p>
+                            </div>
+                            <div class="report-timestamp">
+                                <span id="reportMetaTimestamp">—</span>
+                            </div>
+                        </div>
+
+                        <div class="report-summary-bar" id="reportSummaryBar"></div>
+
+                        <div class="table-responsive">
+                            <table class="data-table report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Transit Line</th>
+                                        <th>Type</th>
+                                        <th>Crowd</th>
+                                        <th>Risk</th>
+                                        <th>Score</th>
+                                        <th>Avg Delay</th>
+                                        <th>7-Day Demand</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportTable">
+                                    <tr><td colspan="8" class="table-empty-cell">Generating performance report...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="report-footer">
+                            <p>Report generated automatically by TransitTrack AI v1.0. Based strictly on stored historical operations data.</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Record Create/Edit Modal (FR-13 CRUD) -->
+    <div id="recordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add Historical Record</h3>
+                <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close modal">✕</button>
+            </div>
+            <form id="historyForm" novalidate>
+                <div class="modal-body">
+                    <input type="hidden" id="historyId">
+
+                    <div class="form-group">
+                        <label for="historyRoute">Route / Station</label>
+                        <select id="historyRoute" class="form-select" required></select>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="historyDate">Record Date</label>
+                            <input id="historyDate" type="date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="historyTime">Schedule Time</label>
+                            <input id="historyTime" type="time" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row-2">
+                        <div class="form-group">
+                            <label for="historyDelay">Delay (minutes)</label>
+                            <input id="historyDelay" type="number" class="form-input" min="0" max="180" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="historyRidership">Ridership (passengers)</label>
+                            <input id="historyRidership" type="number" class="form-input" min="0" max="20000" placeholder="1000" required>
+                        </div>
+                    </div>
+
+                    <div id="historyError" class="alert-box error hidden"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="historySaveBtn">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-box modal-sm">
+            <div class="modal-header">
+                <h3>Confirm Deletion</h3>
+                <button type="button" class="modal-close" id="deleteModalClose">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this historical transit record? This action cannot be undone.</p>
+                <input type="hidden" id="deleteRecordId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="deleteCancelBtn">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete Record</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/script.js"></script>
+</body>
+</html>
+
