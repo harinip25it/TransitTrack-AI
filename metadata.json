@@ -1,0 +1,6 @@
+{
+  "name": "TransitTrack AI",
+  "description": "Intelligent transit analytics and operations platform for crowd prediction, route risk assessment, and demand forecasting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
