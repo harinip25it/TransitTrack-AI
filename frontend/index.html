@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TransitTrack AI — Intelligent Transit Analytics</title>
+    <title>TransitTrack AI — Transit Analytics & Operations</title>
+    <meta name="description" content="Intelligent transit analytics and operations platform for crowd prediction, route risk assessment, and demand forecasting.">
+    <!-- PWA Metadata & Mobile Capability -->
+    <meta name="theme-color" content="#0284c7">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TransitTrack">
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -117,6 +130,11 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <span>What-If Simulation</span>
                 </button>
+                <button class="nav-btn" data-section="ai-copilot" id="navAiCopilotBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12a10 10 0 0 1 10-10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    <span>AI Copilot</span>
+                    <span class="nav-badge-ai">AI</span>
+                </button>
 
                 <div class="nav-section-title">Data Management</div>
                 <button class="nav-btn" data-section="historical">
@@ -130,15 +148,22 @@
             </nav>
 
             <div class="sidebar-footer">
+                <button type="button" class="sidebar-install-btn hidden" id="sidebarInstallBtn" title="Install TransitTrack application">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Install App</span>
+                </button>
                 <div class="system-status-indicator">
                     <span class="status-pulse-dot"></span>
                     <div class="status-details">
                         <span class="status-text">System Active</span>
-                        <small>SQLite · FastAPI · Local</small>
+                        <small id="systemDbBadge">Supabase PostgreSQL · Express</small>
                     </div>
                 </div>
             </div>
         </aside>
+
+        <!-- Mobile Drawer Backdrop Overlay -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 
         <!-- Main Content Area -->
         <div class="main-wrapper">
@@ -165,6 +190,18 @@
                         <!-- Search Dropdown Results -->
                         <div id="searchResultsDropdown" class="search-dropdown hidden"></div>
                     </div>
+
+                    <!-- PWA In-App Install Trigger -->
+                    <button type="button" class="btn-install-header hidden" id="headerInstallBtn" title="Install TransitTrack on this device">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>Install App</span>
+                    </button>
+
+                    <!-- AI Copilot Quick Header Trigger -->
+                    <button type="button" class="btn-ai-header" id="headerAiBtn" title="Launch AI Dispatch Copilot">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12a10 10 0 0 1 10-10z"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span>Ask Copilot</span>
+                    </button>
 
                     <!-- User Profile -->
                     <div class="user-profile-bar">
@@ -832,6 +869,120 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- 10. AI COPILOT SECTION -->
+                <section class="page-section" id="ai-copilot">
+                    <div class="section-banner">
+                        <div>
+                            <span class="section-eyebrow">Generative Dispatch Intelligence</span>
+                            <h1 class="section-title">AI Operations Copilot</h1>
+                            <p class="section-desc">Conversational dispatch assistant powered by Google Gemini 3.8 Flash, grounded in live route telemetry and predictive algorithms.</p>
+                        </div>
+                        <div class="ai-header-controls">
+                            <div class="ai-model-pill" id="aiModelStatusBadge">
+                                <span class="ai-sparkle-dot"></span>
+                                <span id="aiModelBadgeText">Gemini 3.8 Flash</span>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="aiClearChatBtn" title="Reset conversation">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Clear Chat</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ai-copilot-container">
+                        <!-- Suggested Questions / Prompt Chips -->
+                        <div class="ai-quick-prompts-bar">
+                            <span class="ai-prompts-label">Quick Prompts:</span>
+                            <div class="ai-prompt-chips" id="aiPromptChips">
+                                <button type="button" class="ai-chip" data-prompt="What is the operational status and delay risk for Route 202 Airport Express?">
+                                    🚨 Route 202 Status
+                                </button>
+                                <button type="button" class="ai-chip" data-prompt="Which transit corridors currently have the highest delays or risk ratings?">
+                                    ⚠️ High Delay Corridors
+                                </button>
+                                <button type="button" class="ai-chip" data-prompt="Recommend alternative routes and mitigation strategies for Airport Express congestion.">
+                                    🔄 Alternative Route Plan
+                                </button>
+                                <button type="button" class="ai-chip" data-prompt="What is the severe weather contingency protocol for the Downtown Loop?">
+                                    🌧️ Weather Protocol
+                                </button>
+                                <button type="button" class="ai-chip" data-prompt="Provide a fleet-wide performance scorecard summary across all routes and stations.">
+                                    📊 Fleet Scorecard
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Window -->
+                        <div class="ai-chat-card">
+                            <div class="ai-messages-scroll" id="aiChatMessages" role="log" aria-live="polite">
+                                <!-- Initial Welcoming Card -->
+                                <div class="ai-welcome-card" id="aiWelcomeCard">
+                                    <div class="ai-welcome-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12a10 10 0 0 1 10-10z"/><path d="m9 12 2 2 4-4"/></svg>
+                                    </div>
+                                    <h3>TransitTrack AI Operations Copilot</h3>
+                                    <p>I am your real-time dispatch and situational intelligence assistant. Ask questions in natural language about route delays, crowding, alternative routes, or emergency contingency protocols.</p>
+                                    <div class="ai-welcome-capabilities">
+                                        <div class="ai-cap-item">
+                                            <strong>Telemetry Grounded</strong>
+                                            <span>Analyzes live records across all 5 transit lines</span>
+                                        </div>
+                                        <div class="ai-cap-item">
+                                            <strong>Risk & Crowding Mitigation</strong>
+                                            <span>Instant alternative routing recommendations</span>
+                                        </div>
+                                        <div class="ai-cap-item">
+                                            <strong>What-If Analysis</strong>
+                                            <span>Generates weather and passenger surge protocols</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Typing / Analyzing Indicator -->
+                            <div id="aiTypingIndicator" class="ai-typing-indicator hidden" aria-live="assertive">
+                                <div class="typing-bubble">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                                <span class="typing-label">Copilot is analyzing transit telemetry & formulating guidance...</span>
+                            </div>
+
+                            <!-- Error Alert Banner -->
+                            <div id="aiChatError" class="ai-chat-error-banner hidden" role="alert">
+                                <div class="error-content">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    <span id="aiChatErrorText">An error occurred while communicating with AI Copilot.</span>
+                                </div>
+                                <button type="button" class="btn-ghost btn-sm" id="aiChatRetryBtn">Retry</button>
+                            </div>
+
+                            <!-- Chat Input Form -->
+                            <form id="aiChatForm" class="ai-chat-input-box">
+                                <div class="ai-input-wrap">
+                                    <textarea 
+                                        id="aiChatInput" 
+                                        class="ai-chat-textarea" 
+                                        rows="1" 
+                                        placeholder="Ask AI Copilot about route performance, crowding, delays, or dispatch plans... (Press Enter to send)"
+                                        maxlength="1000"
+                                        required
+                                    ></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary ai-send-btn" id="aiChatSendBtn" aria-label="Send message">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                    <span>Send</span>
+                                </button>
+                            </form>
+                            <div class="ai-input-footer">
+                                <span class="ai-input-hint">Enter to send · Shift+Enter for newline · Grounded in live transit telemetry & Gemini 3.8 Flash</span>
+                                <span class="ai-char-counter" id="aiCharCounter">0 / 1000</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
     </div>
@@ -900,6 +1051,70 @@
                 <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete Record</button>
             </div>
         </div>
+    </div>
+
+    <!-- Floating In-App Install Banner -->
+    <div id="pwaInstallBanner" class="pwa-install-banner hidden" role="region" aria-label="Install App Prompt">
+        <div class="pwa-banner-icon">
+            <img src="/icons/icon-192.png" alt="TransitTrack Icon" width="42" height="42">
+        </div>
+        <div class="pwa-banner-content">
+            <strong class="pwa-banner-title">Install TransitTrack AI</strong>
+            <span class="pwa-banner-desc">Add to home screen for instant dispatch access, standalone view & offline capabilities.</span>
+        </div>
+        <div class="pwa-banner-actions">
+            <button type="button" class="btn btn-sm btn-primary" id="pwaBannerInstallBtn">Install</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="pwaBannerDismissBtn" aria-label="Dismiss banner">✕</button>
+        </div>
+    </div>
+
+    <!-- iOS Safari Install Modal Guide -->
+    <div id="iosInstallModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="iosModalTitle">
+        <div class="modal-box modal-sm">
+            <div class="modal-header">
+                <div class="ios-modal-header-brand">
+                    <img src="/icons/icon-192.png" alt="TransitTrack" width="28" height="28" class="pwa-brand-thumb">
+                    <h3 id="iosModalTitle">Install on iOS</h3>
+                </div>
+                <button type="button" class="modal-close" id="iosModalClose">✕</button>
+            </div>
+            <div class="modal-body ios-guide-body">
+                <p class="ios-guide-intro">Install <strong>TransitTrack AI</strong> on your iPhone or iPad for standalone home screen access:</p>
+                <ol class="ios-guide-steps">
+                    <li>
+                        <span class="step-num">1</span>
+                        <div class="step-text">
+                            Tap the <strong>Share</strong> button 
+                            <span class="ios-icon-pill" title="Safari Share icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                            </span> 
+                            in the Safari bottom toolbar.
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num">2</span>
+                        <div class="step-text">
+                            Scroll down the action sheet and tap <strong>Add to Home Screen</strong>.
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-num">3</span>
+                        <div class="step-text">
+                            Tap <strong>Add</strong> in the top-right corner to place TransitTrack on your screen.
+                        </div>
+                    </li>
+                </ol>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary w-full" id="iosModalDoneBtn">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offline Connectivity Status Banner -->
+    <div id="pwaOfflineIndicator" class="pwa-offline-indicator hidden" role="status" aria-live="polite">
+        <span class="offline-pulse-dot"></span>
+        <span>Offline Mode — Displaying cached transit telemetry. Real-time updates paused.</span>
     </div>
 
     <script src="/assets/script.js"></script>

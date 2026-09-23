@@ -56,6 +56,15 @@ function formatNumber(num) {
     return Number(num || 0).toLocaleString();
 }
 
+const formatTime = (timestamp) => {
+    if (!timestamp) return "";
+
+    return new Date(timestamp).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+};
+
 // API Client
 async function api(path, options = {}) {
     const headers = { ...(options.headers || {}) };
@@ -96,6 +105,21 @@ async function startApp() {
     
     updateDateTime();
     setInterval(updateDateTime, 1000);
+
+    // Update database status indicator
+    try {
+        const dbStatus = await api("/api/database/status");
+        const dbBadge = document.getElementById("systemDbBadge");
+        if (dbBadge) {
+            if (dbStatus.connected) {
+                dbBadge.textContent = dbStatus.provider === "supabase_pg" 
+                    ? "Supabase (PostgreSQL) · Connected" 
+                    : "Supabase (API) · Connected";
+            } else {
+                dbBadge.textContent = "Supabase PostgreSQL · Ready";
+            }
+        }
+    } catch (_) {}
 
     loginScreen.classList.add("hidden");
     app.classList.remove("hidden");
@@ -164,13 +188,23 @@ function showSection(sectionId) {
         const spanText = activeBtn.querySelector("span") ? activeBtn.querySelector("span").textContent : "";
         breadcrumbText.textContent = spanText || sectionId;
     }
-    sidebar.classList.remove("open");
+    if (typeof closeMobileSidebar === "function") {
+        closeMobileSidebar();
+    } else {
+        sidebar.classList.remove("open");
+    }
     searchDropdown.classList.add("hidden");
 
     if (sectionId === "dashboard") loadDashboard();
     else if (sectionId === "performance") loadPerformance();
     else if (sectionId === "historical") loadHistorical();
     else if (sectionId === "reports") loadReports();
+    else if (sectionId === "ai-copilot") {
+        const input = document.getElementById("aiChatInput");
+        const messages = document.getElementById("aiChatMessages");
+        if (input) setTimeout(() => input.focus(), 150);
+        if (messages) messages.scrollTop = messages.scrollHeight;
+    }
 }
 
 // 1. Dashboard Module (FR-07 - FR-11, NFR-06)
@@ -924,8 +958,292 @@ document.querySelectorAll("[data-go]").forEach((btn) => {
     btn.addEventListener("click", () => showSection(btn.dataset.go));
 });
 
-menuToggleBtn.addEventListener("click", () => sidebar.classList.toggle("open"));
-mobileCloseBtn.addEventListener("click", () => sidebar.classList.remove("open"));
+// Quick AI Copilot Header Button
+const headerAiBtn = document.getElementById("headerAiBtn");
+if (headerAiBtn) {
+    headerAiBtn.addEventListener("click", () => {
+        showSection("ai-copilot");
+    });
+}
+
+// ============================================================================
+// AI OPERATIONS COPILOT CONTROLLER
+// ============================================================================
+let aiChatHistory = [];
+let lastAiUserQuery = "";
+
+const aiChatMessages = document.getElementById("aiChatMessages");
+const aiTypingIndicator = document.getElementById("aiTypingIndicator");
+const aiChatError = document.getElementById("aiChatError");
+const aiChatErrorText = document.getElementById("aiChatErrorText");
+const aiChatRetryBtn = document.getElementById("aiChatRetryBtn");
+const aiChatForm = document.getElementById("aiChatForm");
+const aiChatInput = document.getElementById("aiChatInput");
+const aiChatSendBtn = document.getElementById("aiChatSendBtn");
+const aiClearChatBtn = document.getElementById("aiClearChatBtn");
+const aiCharCounter = document.getElementById("aiCharCounter");
+const aiModelBadgeText = document.getElementById("aiModelBadgeText");
+
+function formatAiMarkdown(text) {
+    if (!text) return "";
+    const escapeHtml = (str) =>
+        str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    const lines = text.split("\n");
+    let html = "";
+    let inList = false;
+    let inOrderedList = false;
+
+    for (let rawLine of lines) {
+        let line = escapeHtml(rawLine);
+        // Replace bold **text**
+        line = line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+        // Replace inline `code`
+        line = line.replace(/`(.*?)`/g, "<code>$1</code>");
+
+        // Headers
+        if (line.startsWith("### ")) {
+            if (inList) { html += "</ul>"; inList = false; }
+            if (inOrderedList) { html += "</ol>"; inOrderedList = false; }
+            html += `<h3>${line.slice(4)}</h3>`;
+            continue;
+        }
+        if (line.startsWith("## ")) {
+            if (inList) { html += "</ul>"; inList = false; }
+            if (inOrderedList) { html += "</ol>"; inOrderedList = false; }
+            html += `<h3>${line.slice(3)}</h3>`;
+            continue;
+        }
+
+        // Bullet lists
+        if (line.trim().startsWith("* ") || line.trim().startsWith("- ")) {
+            if (inOrderedList) { html += "</ol>"; inOrderedList = false; }
+            if (!inList) { html += "<ul>"; inList = true; }
+            const itemText = line.trim().replace(/^[\*\-]\s+/, "");
+            html += `<li>${itemText}</li>`;
+            continue;
+        }
+
+        // Numbered lists
+        const numMatch = line.trim().match(/^\d+\.\s+(.*)/);
+        if (numMatch) {
+            if (inList) { html += "</ul>"; inList = false; }
+            if (!inOrderedList) { html += "<ol>"; inOrderedList = true; }
+            html += `<li>${numMatch[1]}</li>`;
+            continue;
+        }
+
+        // Close open lists
+        if (inList) { html += "</ul>"; inList = false; }
+        if (inOrderedList) { html += "</ol>"; inOrderedList = false; }
+
+        if (line.trim().length === 0) {
+            continue;
+        }
+
+        html += `<p>${line}</p>`;
+    }
+
+    if (inList) html += "</ul>";
+    if (inOrderedList) html += "</ol>";
+    return html;
+}
+
+function appendChatMessage(role, content, timestamp = new Date()) {
+    if (!aiChatMessages) return;
+
+    // Hide welcome card once a conversation begins
+    const welcomeCard = document.getElementById("aiWelcomeCard");
+    if (welcomeCard && !welcomeCard.classList.contains("hidden")) {
+        welcomeCard.classList.add("hidden");
+    }
+
+    const timeStr = formatTime(timestamp);
+
+    const msgEl = document.createElement("div");
+    msgEl.className = `ai-message ${role}`;
+
+    const avatarText = role === "user" ? "OP" : "AI";
+    const formattedBody = role === "user" 
+        ? `<p>${content.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` 
+        : formatAiMarkdown(content);
+
+    msgEl.innerHTML = `
+        <div class="ai-msg-avatar" title="${role === 'user' ? 'Operator' : 'AI Copilot'}">${avatarText}</div>
+        <div class="ai-msg-content">
+            <div class="ai-msg-bubble">${formattedBody}</div>
+            <span class="ai-msg-meta">${role === "user" ? "Dispatcher" : "Copilot"} · ${timeStr}</span>
+        </div>
+    `;
+
+    aiChatMessages.appendChild(msgEl);
+    aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+}
+
+async function handleSendAiChat(messageText) {
+    const text = (messageText || "").trim();
+    if (!text) return;
+
+    lastAiUserQuery = text;
+    if (aiChatError) aiChatError.classList.add("hidden");
+
+    // Append operator message to view
+    appendChatMessage("user", text);
+    aiChatHistory.push({ role: "user", content: text });
+
+    if (aiChatInput) {
+        aiChatInput.value = "";
+        aiChatInput.style.height = "auto";
+    }
+    if (aiCharCounter) {
+        aiCharCounter.textContent = "0 / 1000";
+    }
+
+    // Set UI loading state
+    if (aiTypingIndicator) aiTypingIndicator.classList.remove("hidden");
+    if (aiChatSendBtn) aiChatSendBtn.disabled = true;
+    if (aiChatMessages) aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+
+    try {
+        const response = await api("/api/ai/chat", {
+            method: "POST",
+            body: JSON.stringify({
+                message: text,
+                history: aiChatHistory.slice(-8),
+            }),
+        });
+
+        if (aiModelBadgeText && response.model) {
+            aiModelBadgeText.textContent = response.model === "gemini-3.8-flash" 
+                ? "Gemini 3.8 Flash · Active" 
+                : "Transit Intelligence Engine";
+        }
+
+        const reply = response.reply || "Telemetry snapshot received. No additional dispatch alerts required.";
+        appendChatMessage("assistant", reply, response.timestamp || new Date());
+        aiChatHistory.push({ role: "model", content: reply });
+    } catch (err) {
+        console.error("[AI Copilot] Communication error:", err);
+        if (aiChatError && aiChatErrorText) {
+            aiChatErrorText.textContent = err.message || "Failed to contact AI Copilot. Check network and credentials.";
+            aiChatError.classList.remove("hidden");
+        }
+    } finally {
+        if (aiTypingIndicator) aiTypingIndicator.classList.add("hidden");
+        if (aiChatSendBtn) aiChatSendBtn.disabled = false;
+        if (aiChatInput) aiChatInput.focus();
+    }
+}
+
+// Quick Prompt Chips Event Listeners
+document.querySelectorAll(".ai-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+        const prompt = chip.dataset.prompt;
+        if (prompt) {
+            handleSendAiChat(prompt);
+        }
+    });
+});
+
+// Chat Form Submission
+if (aiChatForm) {
+    aiChatForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (aiChatInput) {
+            handleSendAiChat(aiChatInput.value);
+        }
+    });
+}
+
+// Textarea Keyboard & Auto-resize
+if (aiChatInput) {
+    aiChatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSendAiChat(aiChatInput.value);
+        }
+    });
+
+    aiChatInput.addEventListener("input", () => {
+        if (aiCharCounter) {
+            aiCharCounter.textContent = `${aiChatInput.value.length} / 1000`;
+        }
+        // Auto-grow height up to 120px
+        aiChatInput.style.height = "auto";
+        aiChatInput.style.height = Math.min(aiChatInput.scrollHeight, 120) + "px";
+    });
+}
+
+// Retry Button
+if (aiChatRetryBtn) {
+    aiChatRetryBtn.addEventListener("click", () => {
+        if (lastAiUserQuery) {
+            handleSendAiChat(lastAiUserQuery);
+        }
+    });
+}
+
+// Clear Chat Button
+if (aiClearChatBtn) {
+    aiClearChatBtn.addEventListener("click", () => {
+        aiChatHistory = [];
+        if (aiChatMessages) {
+            aiChatMessages.innerHTML = `
+                <div class="ai-welcome-card" id="aiWelcomeCard">
+                    <div class="ai-welcome-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12a10 10 0 0 1 10-10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    </div>
+                    <h3>TransitTrack AI Operations Copilot</h3>
+                    <p>I am your real-time dispatch and situational intelligence assistant. Ask questions in natural language about route delays, crowding, alternative routes, or emergency contingency protocols.</p>
+                    <div class="ai-welcome-capabilities">
+                        <div class="ai-cap-item">
+                            <strong>Telemetry Grounded</strong>
+                            <span>Analyzes live records across all 5 transit lines</span>
+                        </div>
+                        <div class="ai-cap-item">
+                            <strong>Risk & Crowding Mitigation</strong>
+                            <span>Instant alternative routing recommendations</span>
+                        </div>
+                        <div class="ai-cap-item">
+                            <strong>What-If Analysis</strong>
+                            <span>Generates weather and passenger surge protocols</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        if (aiChatError) aiChatError.classList.add("hidden");
+        showToast("AI Copilot conversation cleared.");
+    });
+}
+
+function closeMobileSidebar() {
+    sidebar.classList.remove("open");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (backdrop) backdrop.classList.remove("active");
+    document.body.classList.remove("sidebar-open-scroll-lock");
+}
+
+function openMobileSidebar() {
+    sidebar.classList.add("open");
+    const backdrop = document.getElementById("sidebarBackdrop");
+    if (backdrop) backdrop.classList.add("active");
+    document.body.classList.add("sidebar-open-scroll-lock");
+}
+
+const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener("click", closeMobileSidebar);
+}
+
+menuToggleBtn.addEventListener("click", () => {
+    if (sidebar.classList.contains("open")) {
+        closeMobileSidebar();
+    } else {
+        openMobileSidebar();
+    }
+});
+mobileCloseBtn.addEventListener("click", closeMobileSidebar);
 logoutButton.addEventListener("click", () => logout());
 
 // Login Form Submit
@@ -961,4 +1279,173 @@ loginForm.addEventListener("submit", async (e) => {
 if (token()) {
     startApp().catch(() => logout(false));
 }
+
+// ==========================================================================
+// 10. Progressive Web App (PWA) Integration Module
+// ==========================================================================
+
+let deferredInstallPrompt = null;
+
+function isAppInStandaloneMode() {
+    return (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true ||
+        document.referrer.includes("android-app://")
+    );
+}
+
+function isIOSDevice() {
+    const ua = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(ua) && !window.MSStream;
+}
+
+function updateStandaloneUI() {
+    const isStandalone = isAppInStandaloneMode();
+    if (isStandalone) {
+        document.body.classList.add("standalone-mode");
+        const headerInstallBtn = document.getElementById("headerInstallBtn");
+        const sidebarInstallBtn = document.getElementById("sidebarInstallBtn");
+        const pwaInstallBanner = document.getElementById("pwaInstallBanner");
+        if (headerInstallBtn) headerInstallBtn.classList.add("hidden");
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.add("hidden");
+        if (pwaInstallBanner) pwaInstallBanner.classList.add("hidden");
+    }
+}
+
+function setupPWA() {
+    const headerInstallBtn = document.getElementById("headerInstallBtn");
+    const sidebarInstallBtn = document.getElementById("sidebarInstallBtn");
+    const pwaInstallBanner = document.getElementById("pwaInstallBanner");
+    const pwaBannerInstallBtn = document.getElementById("pwaBannerInstallBtn");
+    const pwaBannerDismissBtn = document.getElementById("pwaBannerDismissBtn");
+    const iosInstallModal = document.getElementById("iosInstallModal");
+    const iosModalClose = document.getElementById("iosModalClose");
+    const iosModalDoneBtn = document.getElementById("iosModalDoneBtn");
+    const pwaOfflineIndicator = document.getElementById("pwaOfflineIndicator");
+
+    updateStandaloneUI();
+
+    // Listen for display-mode changes
+    try {
+        window.matchMedia("(display-mode: standalone)").addEventListener("change", () => {
+            updateStandaloneUI();
+        });
+    } catch (e) {
+        // Fallback for older browsers
+    }
+
+    // 1. Service Worker Registration
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", async () => {
+            try {
+                const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+                console.log("[PWA] Service Worker registered with scope:", registration.scope);
+
+                registration.addEventListener("updatefound", () => {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener("statechange", () => {
+                            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                                console.log("[PWA] New operational cache available.");
+                            }
+                        });
+                    }
+                });
+            } catch (err) {
+                console.warn("[PWA] Service Worker registration note:", err.message);
+            }
+        });
+    }
+
+    // 2. Connectivity Listeners (Online / Offline Indicator)
+    function updateOnlineStatus() {
+        if (!navigator.onLine) {
+            if (pwaOfflineIndicator) pwaOfflineIndicator.classList.remove("hidden");
+        } else {
+            if (pwaOfflineIndicator && !pwaOfflineIndicator.classList.contains("hidden")) {
+                pwaOfflineIndicator.classList.add("hidden");
+                showToast("Connection restored. Transit telemetry synchronizing.");
+            }
+        }
+    }
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    if (!navigator.onLine) updateOnlineStatus();
+
+    // 3. In-App Install Prompt Handling (Chromium / Desktop / Android)
+    window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+
+        if (!isAppInStandaloneMode()) {
+            if (headerInstallBtn) headerInstallBtn.classList.remove("hidden");
+            if (sidebarInstallBtn) sidebarInstallBtn.classList.remove("hidden");
+
+            const isDismissed = sessionStorage.getItem("pwa_banner_dismissed");
+            if (pwaInstallBanner && !isDismissed) {
+                setTimeout(() => {
+                    pwaInstallBanner.classList.remove("hidden");
+                }, 1800);
+            }
+        }
+    });
+
+    async function triggerInstallFlow() {
+        if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            console.log("[PWA] Install prompt outcome:", outcome);
+            deferredInstallPrompt = null;
+            if (headerInstallBtn) headerInstallBtn.classList.add("hidden");
+            if (sidebarInstallBtn) sidebarInstallBtn.classList.add("hidden");
+            if (pwaInstallBanner) pwaInstallBanner.classList.add("hidden");
+        } else if (isIOSDevice() && !isAppInStandaloneMode()) {
+            if (iosInstallModal) iosInstallModal.classList.remove("hidden");
+        } else {
+            showToast("To install TransitTrack, open your browser menu (⋮) and select 'Install app' or 'Add to Home screen'.");
+        }
+    }
+
+    if (headerInstallBtn) headerInstallBtn.addEventListener("click", triggerInstallFlow);
+    if (sidebarInstallBtn) sidebarInstallBtn.addEventListener("click", triggerInstallFlow);
+    if (pwaBannerInstallBtn) pwaBannerInstallBtn.addEventListener("click", triggerInstallFlow);
+
+    if (pwaBannerDismissBtn) {
+        pwaBannerDismissBtn.addEventListener("click", () => {
+            if (pwaInstallBanner) pwaInstallBanner.classList.add("hidden");
+            sessionStorage.setItem("pwa_banner_dismissed", "true");
+        });
+    }
+
+    // 4. iOS Safari Support
+    if (isIOSDevice() && !isAppInStandaloneMode()) {
+        if (headerInstallBtn) headerInstallBtn.classList.remove("hidden");
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.remove("hidden");
+    }
+
+    const closeIosModal = () => {
+        if (iosInstallModal) iosInstallModal.classList.add("hidden");
+    };
+    if (iosModalClose) iosModalClose.addEventListener("click", closeIosModal);
+    if (iosModalDoneBtn) iosModalDoneBtn.addEventListener("click", closeIosModal);
+    if (iosInstallModal) {
+        iosInstallModal.addEventListener("click", (e) => {
+            if (e.target === iosInstallModal) closeIosModal();
+        });
+    }
+
+    // 5. App Installed Notification
+    window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        if (headerInstallBtn) headerInstallBtn.classList.add("hidden");
+        if (sidebarInstallBtn) sidebarInstallBtn.classList.add("hidden");
+        if (pwaInstallBanner) pwaInstallBanner.classList.add("hidden");
+        document.body.classList.add("standalone-mode");
+        showToast("TransitTrack AI installed! Launch it anytime from your home screen.");
+        console.log("[PWA] Application successfully installed into system shell.");
+    });
+}
+
+// Initialize PWA subsystem
+setupPWA();
 
